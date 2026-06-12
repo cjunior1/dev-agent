@@ -33,10 +33,10 @@ dev = [
     "ruff>=0.6.0",
 ]
 anthropic = ["langchain-anthropic>=0.3.0"]
-openai    = ["langchain-openai>=0.2.0"]
-google    = ["langchain-google-genai>=2.0.0"]
-groq      = ["langchain-groq>=0.2.0"]
-all-llms  = [
+openai = ["langchain-openai>=0.2.0"]
+google = ["langchain-google-genai>=2.0.0"]
+groq = ["langchain-groq>=0.2.0"]
+all-llms = [
     "langchain-anthropic>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-google-genai>=2.0.0",
