@@ -1,0 +1,39 @@
+agent:
+  model: "claude-sonnet-4-6"
+  max_iterations: 25
+  recursion_limit: 50
+  temperature: 0.1
+  streaming: true
+
+harness:
+  checkpointing: true
+  interrupt_before: []
+  interrupt_after: []
+  debug_mode: false
+
+tools:
+  enabled:
+    - shell
+    - file_read
+    - file_write
+    - git
+    - code_search
+    - web_fetch
+    - code_lint
+    - test_runner
+
+webhooks:
+  enabled: false
+  host: "0.0.0.0"
+  port: 8080
+  secret: ""
+  endpoints:
+    - path: "/webhook/github"
+      event_type: "github"
+    - path: "/webhook/gitlab"
+      event_type: "gitlab"
+
+cli:
+  history_file: "~/.dev_agent_history"
+  max_history: 500
+  theme: "monokai"

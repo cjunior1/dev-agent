@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# pytest / ruff cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# LangGraph checkpoints (in-memory only, but if file-backed later)
+checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
