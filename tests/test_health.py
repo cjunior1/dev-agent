@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from dev_agent.config import LLMProfile
-from dev_agent.agent.health import check_profile, check_all, ProfileStatus
+from dev_agent.agent.health import check_profile, check_all
 
 
 PROFILES = {
