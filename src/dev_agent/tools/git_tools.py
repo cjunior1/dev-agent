@@ -5,9 +5,12 @@ import asyncio
 from langchain_core.tools import tool
 
 
-async def _git(args: str, cwd: str = ".") -> str:
-    proc = await asyncio.create_subprocess_shell(
-        f"git {args}",
+async def _git(args: list[str], cwd: str = ".") -> str:
+    # Use exec (not shell) with an explicit argv so user-supplied values
+    # (commit messages, branch names, refs) cannot inject shell commands.
+    proc = await asyncio.create_subprocess_exec(
+        "git",
+        *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
         cwd=cwd,
@@ -23,8 +26,8 @@ async def git_status(cwd: str = ".") -> str:
     Args:
         cwd: Repository directory (default: current).
     """
-    status = await _git("status --short --branch", cwd)
-    log = await _git("log --oneline -10", cwd)
+    status = await _git(["status", "--short", "--branch"], cwd)
+    log = await _git(["log", "--oneline", "-10"], cwd)
     return f"=== STATUS ===\n{status}\n\n=== RECENT LOG ===\n{log}"
 
 
@@ -36,7 +39,7 @@ async def git_diff(cwd: str = ".", ref: str = "HEAD") -> str:
         cwd: Repository directory.
         ref: Git ref to diff against (e.g. 'HEAD', 'main', 'HEAD~1').
     """
-    result = await _git(f"diff {ref}", cwd)
+    result = await _git(["diff", ref], cwd)
     if len(result) > 8000:
         result = result[:8000] + "\n...[diff truncated]"
     return result or "(no changes)"
@@ -52,8 +55,8 @@ async def git_commit(message: str, cwd: str = ".", add_all: bool = False) -> str
         add_all: If True, stage all changes before committing (git add -A).
     """
     if add_all:
-        await _git("add -A", cwd)
-    return await _git(f'commit -m "{message}"', cwd)
+        await _git(["add", "-A"], cwd)
+    return await _git(["commit", "-m", message], cwd)
 
 
 @tool
@@ -66,7 +69,7 @@ async def git_branch(cwd: str = ".", create: str = "", checkout: str = "") -> st
         checkout: Branch name to checkout (must already exist).
     """
     if create:
-        return await _git(f"checkout -b {create}", cwd)
+        return await _git(["checkout", "-b", create], cwd)
     if checkout:
-        return await _git(f"checkout {checkout}", cwd)
-    return await _git("branch -a", cwd)
+        return await _git(["checkout", checkout], cwd)
+    return await _git(["branch", "-a"], cwd)

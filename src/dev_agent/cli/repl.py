@@ -1,6 +1,5 @@
 """Interactive REPL for the dev agent with Rich rendering."""
 
-import asyncio
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING

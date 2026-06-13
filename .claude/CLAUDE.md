@@ -60,7 +60,7 @@ cacau run/chat  →  cli/main.py  →  AgentHarness.run()
 
 - **`agent/harness.py`** — `AgentHarness`. Builds LLM and graph on every `run()` call (not at `__init__`). Yields a `profile_selected` event before the first token. Accepts `profile` and `model` overrides per call; `model` patches the resolved profile via `model_copy(update={"model": ...})`.
 
-- **`agent/graph.py`** — `build_graph(llm, settings)` returns an uncompiled `StateGraph`. The harness compiles it with `MemorySaver` checkpointer and interrupt hooks. Tools are extracted from `llm.tools` (set by `bind_tools`).
+- **`agent/graph.py`** — `build_graph(llm, settings, tools)` returns an uncompiled `StateGraph`. The harness compiles it with `MemorySaver` checkpointer and interrupt hooks. The executable `tools` list is passed in explicitly to populate the `ToolNode` — the bound LLM does not expose the original tool objects (`bind_tools` returns a `RunnableBinding` whose tools live as schema dicts in `.kwargs`, not as a `.tools` attribute).
 
 - **`agent/health.py`** — `check_all(profiles)` runs `check_profile` concurrently via `asyncio.gather`. Used by `cacau config check`.
 

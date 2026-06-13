@@ -59,7 +59,7 @@ AgentHarness.run()                                                     │
     │                                                                  │
     ├─ providers.build_llm(profile, tools)  → BaseChatModel + bind_tools
     │                                                                  │
-    ├─ graph.build_graph(llm, settings)     → StateGraph              │
+    ├─ graph.build_graph(llm, settings, tools) → StateGraph           │
     │       agent node  ──→  ToolNode  ──→  agent node (loop)         │
     │       └── guarded by max_iterations                             │
     │                                                                  │
@@ -113,7 +113,7 @@ The classifier LLM receives a structured prompt listing all profiles and their d
 
 ### 4. Agent graph (`agent/graph.py`)
 
-`build_graph(llm, settings)` returns an uncompiled `StateGraph[AgentState]` with two nodes:
+`build_graph(llm, settings, tools)` returns an uncompiled `StateGraph[AgentState]` with two nodes:
 
 ```
  ┌────────────────────────────────────────────────┐

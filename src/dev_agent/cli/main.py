@@ -272,7 +272,6 @@ def profile_list_cmd():
     table.add_column("API Key Env", min_width=20)
 
     for name, p in settings.profiles.items():
-        is_active = (name == active) or (active == "auto" and name == next(iter(settings.profiles)))
         icon = "[green]✓[/]" if name == active else "[dim]·[/dim]"
         api_key = p.api_key_env or "[dim]—[/dim]"
         table.add_row(icon, name, p.provider, p.model, api_key)
@@ -558,7 +557,7 @@ def key_set_cmd(
 
     known_keys = {v["api_key_env"] for v in _PROVIDER_DEFAULTS.values() if v["api_key_env"]}
     if key in known_keys:
-        console.print(f"[dim]Run [bold]dev-agent config check[/bold] to verify connectivity.[/dim]\n")
+        console.print("[dim]Run [bold]dev-agent config check[/bold] to verify connectivity.[/dim]\n")
 
 
 @key_app.command("list")
@@ -568,7 +567,7 @@ def key_list_cmd():
 
     if not env:
         console.print(f"\n[dim]No .env file found at {_ENV_PATH}[/dim]")
-        console.print(f"[dim]Run [bold]dev-agent config key set KEY value[/bold] to create one.[/dim]\n")
+        console.print("[dim]Run [bold]dev-agent config key set KEY value[/bold] to create one.[/dim]\n")
         return
 
     table = Table(show_header=True, header_style="bold cyan", box=None, pad_edge=False)

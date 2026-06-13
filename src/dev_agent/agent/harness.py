@@ -11,6 +11,7 @@ from dev_agent.agent.graph import build_graph
 from dev_agent.agent.providers import build_llm
 from dev_agent.agent.selector import select_profile
 from dev_agent.config import LLMProfile, Settings, get_settings
+from dev_agent.tools.filesystem import set_workspace_root
 from dev_agent.tools.registry import build_toolset
 
 
@@ -27,9 +28,23 @@ class AgentHarness:
         self.settings = settings or get_settings()
         self._checkpointer = MemorySaver()
         self._tools = build_toolset(None)
+        # Per-thread workspace root, so a resumed conversation confines writes
+        # to the same workspace as its original run. Shares the in-memory
+        # lifetime of the checkpointer.
+        self._workspaces: dict[str, str] = {}
 
     def new_thread(self) -> str:
         return str(uuid.uuid4())
+
+    def _remember_workspace(self, thread_id: str, workspace: str) -> None:
+        """Record a run's workspace and confine writes to it (this context)."""
+        self._workspaces[thread_id] = workspace
+        set_workspace_root(workspace)
+
+    def _restore_workspace(self, thread_id: str) -> None:
+        """Re-confine writes to the workspace of a thread's original run,
+        falling back to the process CWD for unknown threads."""
+        set_workspace_root(self._workspaces.get(thread_id, "."))
 
     def _run_config(self, thread_id: str) -> dict[str, Any]:
         return {
@@ -67,6 +82,7 @@ class AgentHarness:
         Event types: 'profile_selected' | 'token' | 'tool_call' | 'tool_result' | 'done'
         """
         thread_id = thread_id or self.new_thread()
+        self._remember_workspace(thread_id, workspace)
 
         profile_name, selected_profile = await self._resolve_profile(prompt, profile)
         if model:
@@ -79,7 +95,7 @@ class AgentHarness:
         }
 
         llm = build_llm(selected_profile, self._tools)
-        graph = build_graph(llm, self.settings)
+        graph = build_graph(llm, self.settings, self._tools)
         compiled = graph.compile(
             checkpointer=self._checkpointer,
             interrupt_before=self.settings.harness.interrupt_before or [],
@@ -129,9 +145,10 @@ class AgentHarness:
         profile: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Resume a graph that was interrupted (human-in-the-loop)."""
+        self._restore_workspace(thread_id)
         profile_name, selected_profile = await self._resolve_profile("", profile)
         llm = build_llm(selected_profile, self._tools)
-        graph = build_graph(llm, self.settings)
+        graph = build_graph(llm, self.settings, self._tools)
         compiled = graph.compile(
             checkpointer=self._checkpointer,
             interrupt_before=self.settings.harness.interrupt_before or [],
