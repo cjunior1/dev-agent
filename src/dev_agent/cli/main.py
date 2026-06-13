@@ -101,6 +101,7 @@ def run_cmd(
     workspace: str = typer.Option(".", "--workspace", "-w", help="Working directory for tools."),
     thread_id: Optional[str] = typer.Option(None, "--thread", "-t", help="Thread ID (resumes conversation)."),
     profile: Optional[str] = typer.Option(None, "--profile", "-p", help="LLM profile name (overrides config)."),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model name (overrides the profile's model)."),
     json_output: bool = typer.Option(False, "--json", help="Emit raw JSON events instead of rendered output."),
 ):
     """Run the agent with a single prompt and stream the response."""
@@ -109,7 +110,7 @@ def run_cmd(
         harness, ws = _get_harness(workspace)
         tid = thread_id or harness.new_thread()
 
-        async for event in harness.run(prompt, thread_id=tid, workspace=ws, profile=profile):
+        async for event in harness.run(prompt, thread_id=tid, workspace=ws, profile=profile, model=model):
             if json_output:
                 print(json.dumps(event), flush=True)
                 continue
@@ -142,13 +143,14 @@ def run_cmd(
 def chat_cmd(
     workspace: str = typer.Option(".", "--workspace", "-w", help="Working directory for tools."),
     profile: Optional[str] = typer.Option(None, "--profile", "-p", help="LLM profile name (overrides config)."),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model name (overrides the profile's model)."),
 ):
     """Start an interactive chat REPL with the agent."""
     from dev_agent.cli.repl import run_repl
 
     async def _chat():
         harness, ws = _get_harness(workspace)
-        await run_repl(harness, workspace=ws, default_profile=profile)
+        await run_repl(harness, workspace=ws, default_profile=profile, default_model=model)
 
     asyncio.run(_chat())
 

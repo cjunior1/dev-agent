@@ -59,6 +59,7 @@ class AgentHarness:
         thread_id: str | None = None,
         workspace: str = ".",
         profile: str | None = None,
+        model: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Stream agent events for a given prompt.
 
@@ -68,6 +69,8 @@ class AgentHarness:
         thread_id = thread_id or self.new_thread()
 
         profile_name, selected_profile = await self._resolve_profile(prompt, profile)
+        if model:
+            selected_profile = selected_profile.model_copy(update={"model": model})
         yield {
             "type": "profile_selected",
             "payload": {"name": profile_name, "model": selected_profile.model,

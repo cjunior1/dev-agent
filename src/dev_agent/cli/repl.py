@@ -61,13 +61,14 @@ async def _stream_response(
     thread_id: str,
     workspace: str,
     default_profile: str | None,
+    default_model: str | None = None,
 ) -> str:
     """Stream the agent response, rendering events as they arrive."""
     full_response = ""
     is_auto = default_profile is None and harness.settings.agent.profile == "auto"
     console.print()
 
-    async for event in harness.run(prompt, thread_id=thread_id, workspace=workspace, profile=default_profile):
+    async for event in harness.run(prompt, thread_id=thread_id, workspace=workspace, profile=default_profile, model=default_model):
         etype = event["type"]
         payload = event["payload"]
 
@@ -95,7 +96,7 @@ async def _stream_response(
     return full_response
 
 
-async def run_repl(harness: "AgentHarness", workspace: str = ".", default_profile: str | None = None) -> None:
+async def run_repl(harness: "AgentHarness", workspace: str = ".", default_profile: str | None = None, default_model: str | None = None) -> None:
     """Start the interactive REPL loop."""
     from dev_agent.tools.registry import list_tools
 
@@ -167,7 +168,7 @@ async def run_repl(harness: "AgentHarness", workspace: str = ".", default_profil
 
         # --- agent invocation ---
         try:
-            await _stream_response(harness, user_input, thread_id, workspace, default_profile)
+            await _stream_response(harness, user_input, thread_id, workspace, default_profile, default_model)
         except Exception as e:
             console.print(f"[red]Error:[/] {e}")
 
