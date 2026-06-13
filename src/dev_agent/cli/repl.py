@@ -26,7 +26,7 @@ SLASH_COMMANDS = {
     "/exit": "Exit the REPL",
 }
 
-HISTORY_FILE = Path("~/.dev_agent_history").expanduser()
+HISTORY_FILE = Path("~/.cacau_history").expanduser()
 
 
 def _load_history() -> list[str]:
@@ -103,7 +103,7 @@ async def run_repl(harness: "AgentHarness", workspace: str = ".", default_profil
     history: list[str] = _load_history()
 
     console.print(Panel(
-        "[bold green]Dev Agent[/bold green] — interactive mode\n"
+        "[bold green]Cacau[/bold green] — interactive mode\n"
         "[dim]Type your request or a /command. Use /help to see commands.[/dim]",
         border_style="green",
     ))

@@ -80,6 +80,6 @@ webhooks:
   secret: ""
 
 cli:
-  history_file: "~/.dev_agent_history"
+  history_file: "~/.cacau_history"
   max_history: 500
   theme: "monokai"

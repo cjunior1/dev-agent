@@ -65,7 +65,7 @@ _DEFAULT_PROFILES: dict[str, LLMProfile] = {
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="DEV_AGENT_",
+        env_prefix="CACAU_",
         env_nested_delimiter="__",
         env_file=".env",
         extra="ignore",
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     harness: HarnessConfig = Field(default_factory=HarnessConfig)
     webhooks: WebhookConfig = Field(default_factory=WebhookConfig)
-    workspace_dir: str = Field(default=".", alias="DEV_AGENT_WORKSPACE")
+    workspace_dir: str = Field(default=".", alias="CACAU_WORKSPACE")
 
     @classmethod
     def from_yaml(cls, path: Path) -> "Settings":

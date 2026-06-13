@@ -13,8 +13,8 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 app = typer.Typer(
-    name="dev-agent",
-    help="Software development assistant powered by LangGraph Deep Agent.",
+    name="cacau",
+    help="Cacau — software development assistant powered by LangGraph Deep Agent.",
     no_args_is_help=True,
 )
 console = Console()
@@ -175,7 +175,7 @@ def serve_cmd(
     web_app = create_app(harness, default_workspace=ws, settings=settings)
 
     console.print(Panel(
-        f"[bold green]Dev Agent Webhook Server[/bold green]\n"
+        f"[bold green]Cacau Webhook Server[/bold green]\n"
         f"Listening on [cyan]http://{host}:{port}[/cyan]\n"
         f"Workspace: [dim]{ws}[/dim]",
         border_style="green",

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dev-agent"
+name = "cacau"
 version = "0.1.0"
 description = "Software development assistant using LangGraph Deep Agent with harness techniques"
 requires-python = ">=3.12"
@@ -44,7 +44,7 @@ all-llms = [
 ]
 
 [project.scripts]
-dev-agent = "dev_agent.cli.main:app"
+cacau = "dev_agent.cli.main:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dev_agent"]

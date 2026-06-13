@@ -1,10 +1,18 @@
-# dev-agent
+<div align="center">
+  <img src="img/cacau.png" alt="Cacau" width="160">
+  <h1>cacau</h1>
+  <p>Software development assistant CLI powered by <strong>LangGraph Deep Agent</strong></p>
+</div>
 
-Software development assistant CLI powered by **LangGraph Deep Agent** — a ReAct loop with harness techniques: checkpointing, interrupt hooks, streaming events, and human-in-the-loop support.
+---
+
+A ReAct loop with harness techniques: checkpointing, interrupt hooks, streaming events, and human-in-the-loop support. Supports multiple LLM providers with named profiles and an `auto` mode that selects the best model for each task.
 
 ## Features
 
 - **Deep Agent loop** — ReAct (Reason + Act) with configurable max-iterations guard
+- **Multi-LLM profiles** — Anthropic, OpenAI, Google Gemini, Groq, and Ollama in one config
+- **Auto mode** — classifier LLM picks the best profile for each prompt automatically
 - **12 development tools** — shell, filesystem, git, linting, testing, web fetch
 - **Interactive REPL** — Rich-rendered streaming output with `/slash` commands
 - **Webhook server** — FastAPI endpoint for GitHub and GitLab CI/CD events
@@ -13,7 +21,7 @@ Software development assistant CLI powered by **LangGraph Deep Agent** — a ReA
 ## Requirements
 
 - Python 3.12+
-- [Anthropic API key](https://console.anthropic.com/)
+- At least one API key (Anthropic, OpenAI, Groq, or Google), or a local [Ollama](https://ollama.com) install
 
 ## Installation
 
@@ -21,30 +29,34 @@ Software development assistant CLI powered by **LangGraph Deep Agent** — a ReA
 git clone https://github.com/cjunior1/dev-agent.git
 cd dev-agent
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+pip install -e ".[all-llms]"
 ```
 
-Create a `.env` file:
+Set up your API keys:
 
 ```bash
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+cacau config key set ANTHROPIC_API_KEY sk-ant-...
+cacau config key set GROQ_API_KEY gsk_...
 ```
+
+Or copy `.env.example` to `.env` and fill in the keys manually.
 
 ## Usage
 
 ### Single-shot prompt
 
 ```bash
-dev-agent run "explain the structure of this project"
-dev-agent run "find all TODO comments and summarise them" --workspace /path/to/project
+cacau run "explain the structure of this project"
+cacau run "find all TODO comments and summarise them" --workspace /path/to/project
+cacau run "refactor the auth module" --profile powerful
 ```
 
 ### Interactive REPL
 
 ```bash
-dev-agent chat
-dev-agent chat --workspace /path/to/project
+cacau chat
+cacau chat --workspace /path/to/project
+cacau chat --profile balanced
 ```
 
 Available slash commands inside the REPL:
@@ -60,10 +72,34 @@ Available slash commands inside the REPL:
 | `/clear`   | Clear the screen                   |
 | `/exit`    | Exit the REPL                      |
 
+### Manage LLM profiles
+
+```bash
+cacau config profile list            # show all profiles
+cacau config profile add             # interactive wizard
+cacau config profile use powerful    # set default profile
+cacau config profile remove my-old   # remove a profile
+```
+
+### Manage API keys
+
+```bash
+cacau config key set ANTHROPIC_API_KEY sk-ant-...
+cacau config key set GROQ_API_KEY gsk_...
+cacau config key list                # show keys (masked)
+```
+
+### Check connectivity
+
+```bash
+cacau config check      # ping all profiles and show latency
+cacau config show       # print full active configuration
+```
+
 ### Webhook server
 
 ```bash
-dev-agent serve --port 8080 --secret my-hmac-secret --workspace /path/to/project
+cacau serve --port 8080 --secret my-hmac-secret --workspace /path/to/project
 ```
 
 Endpoints:
@@ -75,27 +111,22 @@ Endpoints:
 | POST   | `/webhook/gitlab`  | GitLab events (MR, push, issue)          |
 | POST   | `/webhook/run`     | Generic: `{"prompt": "...", "workspace": "..."}` |
 
-### Config and tools
-
-```bash
-dev-agent config show      # inspect active configuration
-dev-agent tools            # list all available tools
-```
-
 ## Examples
 
 ### Fixing a bug end-to-end
 
 ```
-$ dev-agent chat --workspace ~/my-project
+$ cacau chat --workspace ~/my-project
 
 ╭─────────────────────────────────────────────────────╮
-│ Dev Agent — interactive mode                        │
+│ Cacau — interactive mode                            │
 │ Type your request or a /command. Use /help.         │
 ╰─────────────────────────────────────────────────────╯
 Thread: a3f1...  |  Workspace: ~/my-project
 
 you> the test_payment.py tests are failing, can you investigate and fix?
+
+[auto → powerful · claude-opus-4-8]
 
 ⚙ git_status  (cwd=.)
   → M  src/payments/processor.py
@@ -146,7 +177,7 @@ Events:       Pull requests
 Start the server:
 
 ```bash
-dev-agent serve --port 8080 --secret my-hmac-secret --workspace ~/my-project
+cacau serve --port 8080 --secret my-hmac-secret --workspace ~/my-project
 ```
 
 When a PR is opened, the agent automatically reviews it and logs findings:
@@ -162,9 +193,9 @@ INFO:     POST /webhook/github  →  202 Accepted  thread=b8d2e...
 
 ```yaml
 # .github/workflows/review.yml
-- name: Run dev-agent analysis
+- name: Run cacau analysis
   run: |
-    dev-agent run "check for obvious bugs in the last commit diff and list them" \
+    cacau run "check for obvious bugs in the last commit diff and list them" \
       --workspace . \
       --json \
     | jq -r 'select(.type=="done") | .payload'
@@ -193,7 +224,7 @@ async for event in harness.run("now add JWT authentication to those endpoints", 
 
 ```
 src/dev_agent/
-├── config.py              # pydantic-settings + YAML config
+├── config.py              # pydantic-settings + YAML config + LLM profiles
 ├── tools/
 │   ├── shell.py           # async shell execution with safety blocklist
 │   ├── filesystem.py      # file_read / file_write / file_list / code_search
@@ -205,6 +236,9 @@ src/dev_agent/
 │   ├── state.py           # AgentState TypedDict
 │   ├── prompts.py         # system prompt template
 │   ├── graph.py           # LangGraph StateGraph (ReAct loop)
+│   ├── providers.py       # LLM provider factory (anthropic/openai/google/groq/ollama)
+│   ├── selector.py        # auto-selects best profile via classifier LLM
+│   ├── health.py          # profile connectivity checker
 │   └── harness.py         # AgentHarness: checkpointer, hooks, streaming
 ├── cli/
 │   ├── main.py            # Typer app: run / chat / serve / config / tools
@@ -226,31 +260,43 @@ src/dev_agent/
 
 ## Configuration
 
-Edit `config/settings.yaml` or use environment variables (prefix `DEV_AGENT_`):
+Edit `config/settings.yaml` or use the CLI to manage profiles and keys:
 
 ```yaml
+profiles:
+  powerful:
+    provider: anthropic
+    model: claude-opus-4-8
+    api_key_env: ANTHROPIC_API_KEY
+    description: Best for complex reasoning and architecture decisions.
+
+  fast:
+    provider: groq
+    model: llama-3.3-70b-versatile
+    api_key_env: GROQ_API_KEY
+    description: Fast and cheap for simple tasks.
+
+  local:
+    provider: ollama
+    model: qwen2.5-coder:7b
+    base_url: http://localhost:11434
+    description: Local model, no API cost.
+
 agent:
-  model: "claude-sonnet-4-6"   # Anthropic model ID
-  max_iterations: 25            # max tool calls per run
-  temperature: 0.1
-  streaming: true
+  profile: auto         # or any profile name
+  max_iterations: 25
 
-harness:
-  checkpointing: true
-  interrupt_before: []          # node names to pause before
-  interrupt_after: []           # node names to pause after
-
-webhooks:
-  secret: ""                    # HMAC-SHA256 secret for GitHub
-  port: 8080
+llm_selector:
+  profile: fast         # profile used as classifier in auto mode
 ```
 
-Environment variable examples:
+Environment variable overrides (prefix `CACAU_`):
 
 ```bash
-DEV_AGENT_AGENT__MODEL=claude-opus-4-8
-DEV_AGENT_AGENT__MAX_ITERATIONS=50
-DEV_AGENT_WEBHOOKS__SECRET=my-secret
+CACAU_AGENT__PROFILE=powerful
+CACAU_AGENT__MAX_ITERATIONS=50
+CACAU_LLM_SELECTOR__PROFILE=fast
+CACAU_WORKSPACE=~/my-project
 ```
 
 ## Available Tools
