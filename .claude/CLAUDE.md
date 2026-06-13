@@ -68,12 +68,15 @@ cacau run/chat  →  cli/main.py  →  AgentHarness.run()
 
 - **`tools/registry.py`** — `build_toolset(enabled)` returns the tool list; `None` means all tools.
 
+- **`tools/filesystem.py`** — file tools. **Writes are confined to a workspace root; reads/search are not.** Relative paths in all four tools (`file_read`, `file_write`, `file_list`, `code_search`) resolve against the workspace root via `_resolve`; absolute paths are used as-is. `file_write` additionally refuses any target outside the workspace (incl. `../` traversal and symlink escape, since paths are `.resolve()`d). The workspace root lives in a `ContextVar` (`set_workspace_root`), so concurrent runs (e.g. the webhook server) stay isolated. The harness sets it per `run()` and restores it per `resume()` (tracked by `thread_id` in `AgentHarness._workspaces`). Default root is the process CWD.
+
 ## Testing conventions
 
 - `pytest-asyncio` in **strict mode** — every async test requires `@pytest.mark.asyncio`.
 - Use `asyncio.run(coro)`, never `asyncio.get_event_loop().run_until_complete()`.
 - Provider tests mock lazy-import helpers (e.g. `patch("dev_agent.agent.providers._import_anthropic")`).
 - After modifying `Settings` in a test, call `reset_settings()` so the cache doesn't bleed into other tests.
+- Tests exercising `file_write` outside the CWD must call `set_workspace_root(...)` first, or the write is refused as outside the workspace.
 
 ## LLM profile config
 
