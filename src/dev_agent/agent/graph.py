@@ -2,6 +2,7 @@
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage
+from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -10,10 +11,15 @@ from dev_agent.agent.prompts import build_system_prompt
 from dev_agent.config import Settings
 
 
-def build_graph(llm: BaseChatModel, settings: Settings):
+def build_graph(llm: BaseChatModel, settings: Settings, tools: list[BaseTool]):
     """Build and compile the deep agent StateGraph.
 
-    Accepts a BaseChatModel already bound to tools (via providers.build_llm).
+    Accepts a BaseChatModel already bound to tools (via providers.build_llm)
+    and the original tool list to populate the ToolNode. The bound LLM does
+    not expose the original tool objects (``bind_tools`` returns a
+    ``RunnableBinding`` whose tools live as schema dicts in ``.kwargs``), so
+    the executable tools must be passed in explicitly.
+
     Implements a ReAct loop with a max-iterations guard.
     """
     max_iter = settings.agent.max_iterations
@@ -32,9 +38,7 @@ def build_graph(llm: BaseChatModel, settings: Settings):
             return END
         return tools_condition(state)
 
-    # Extract tools from the bound LLM so ToolNode can call them
-    bound_tools = getattr(llm, "tools", None) or []
-    tool_node = ToolNode(bound_tools)
+    tool_node = ToolNode(tools)
 
     graph = StateGraph(AgentState)
     graph.add_node("agent", agent_node)

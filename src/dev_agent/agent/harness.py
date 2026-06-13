@@ -11,6 +11,7 @@ from dev_agent.agent.graph import build_graph
 from dev_agent.agent.providers import build_llm
 from dev_agent.agent.selector import select_profile
 from dev_agent.config import LLMProfile, Settings, get_settings
+from dev_agent.tools.filesystem import set_workspace_root
 from dev_agent.tools.registry import build_toolset
 
 
@@ -67,6 +68,7 @@ class AgentHarness:
         Event types: 'profile_selected' | 'token' | 'tool_call' | 'tool_result' | 'done'
         """
         thread_id = thread_id or self.new_thread()
+        set_workspace_root(workspace)
 
         profile_name, selected_profile = await self._resolve_profile(prompt, profile)
         if model:
@@ -79,7 +81,7 @@ class AgentHarness:
         }
 
         llm = build_llm(selected_profile, self._tools)
-        graph = build_graph(llm, self.settings)
+        graph = build_graph(llm, self.settings, self._tools)
         compiled = graph.compile(
             checkpointer=self._checkpointer,
             interrupt_before=self.settings.harness.interrupt_before or [],
@@ -131,7 +133,7 @@ class AgentHarness:
         """Resume a graph that was interrupted (human-in-the-loop)."""
         profile_name, selected_profile = await self._resolve_profile("", profile)
         llm = build_llm(selected_profile, self._tools)
-        graph = build_graph(llm, self.settings)
+        graph = build_graph(llm, self.settings, self._tools)
         compiled = graph.compile(
             checkpointer=self._checkpointer,
             interrupt_before=self.settings.harness.interrupt_before or [],

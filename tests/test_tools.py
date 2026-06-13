@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from dev_agent.tools.filesystem import file_read, file_write, file_list, code_search
+from dev_agent.tools.filesystem import (
+    file_read,
+    file_write,
+    file_list,
+    code_search,
+    set_workspace_root,
+)
 from dev_agent.tools.shell import shell
 from dev_agent.tools.registry import build_toolset, list_tools
 
@@ -21,6 +27,7 @@ def run(coro):
 # ── filesystem ───────────────────────────────────────────────────────────────
 
 def test_file_write_and_read(tmp_path):
+    set_workspace_root(str(tmp_path))
     target = str(tmp_path / "hello.txt")
     result = file_write.invoke({"path": target, "content": "hello world"})
     assert "Wrote" in result

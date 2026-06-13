@@ -1,16 +1,45 @@
-"""File system tools: read, write, list, search."""
+"""File system tools: read, write, list, search.
 
-import fnmatch
+Reads and searches are unrestricted (the agent legitimately needs to read
+system libraries, /etc, code outside the repo, ...). Writes are confined to
+the workspace root to prevent the agent from clobbering files outside the
+project. The workspace root is held in a ``ContextVar`` so concurrent runs
+(e.g. the webhook server) each get their own root without interfering.
+"""
+
+from contextvars import ContextVar
 from pathlib import Path
 
 from langchain_core.tools import tool
 
+# Workspace root for write confinement. Defaults to the process CWD; the
+# harness sets it per run via ``set_workspace_root``.
+_workspace_root: ContextVar[str] = ContextVar("cacau_workspace_root", default=".")
+
+
+def set_workspace_root(path: str) -> None:
+    """Set the workspace root that ``file_write`` is confined to (this context)."""
+    _workspace_root.set(str(Path(path).expanduser().resolve()))
+
+
+def _workspace() -> Path:
+    return Path(_workspace_root.get()).expanduser().resolve()
+
 
 def _safe_path(path: str, base: str = ".") -> Path:
     base_p = Path(base).expanduser().resolve()
-    target = (base_p / path).resolve()
-    # Prevent path traversal outside base when base is set explicitly
-    return target
+    return (base_p / path).resolve()
+
+
+def _resolve_within_workspace(path: str) -> Path | None:
+    """Resolve ``path`` against the workspace root and return it only if it
+    stays inside the workspace. Returns ``None`` if it would escape."""
+    root = _workspace()
+    target = Path(path).expanduser()
+    target = (target if target.is_absolute() else root / target).resolve()
+    if target == root or root in target.parents:
+        return target
+    return None
 
 
 @tool
@@ -45,11 +74,16 @@ def file_write(path: str, content: str, append: bool = False) -> str:
         content: Text content to write.
         append: If True, append instead of overwrite.
     """
-    p = _safe_path(path)
+    p = _resolve_within_workspace(path)
+    if p is None:
+        return f"ERROR: refused to write outside workspace ({_workspace()}): {path}"
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
-        mode = "a" if append else "w"
-        p.write_text(content) if not append else open(p, "a").write(content)
+        if append:
+            with open(p, "a") as f:
+                f.write(content)
+        else:
+            p.write_text(content)
         action = "Appended to" if append else "Wrote"
         return f"{action} {p} ({len(content)} chars)"
     except Exception as e:
