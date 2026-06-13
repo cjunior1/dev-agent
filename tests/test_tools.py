@@ -1,11 +1,7 @@
 """Smoke tests for dev-agent tools."""
 
 import asyncio
-import os
-import tempfile
-from pathlib import Path
 
-import pytest
 
 from dev_agent.tools.filesystem import (
     file_read,

@@ -40,7 +40,7 @@ def test_anthropic_build(monkeypatch):
     mock_cls = MagicMock()
     mock_cls.return_value.bind_tools.return_value = MagicMock()
     with patch("dev_agent.agent.providers._import_anthropic", return_value=mock_cls):
-        llm = build_llm(p, tools=[])
+        build_llm(p, tools=[])
     mock_cls.assert_called_once_with(
         model="claude-sonnet-4-6", temperature=0.1,
         api_key="sk-ant-test", streaming=True,
@@ -53,7 +53,7 @@ def test_ollama_skips_api_key_check():
     mock_cls = MagicMock()
     mock_cls.return_value.bind_tools.return_value = MagicMock()
     with patch("dev_agent.agent.providers._import_ollama", return_value=mock_cls):
-        llm = build_llm(p, tools=[])
+        build_llm(p, tools=[])
     mock_cls.assert_called_once_with(
         model="qwen2.5-coder:7b", base_url="http://localhost:11434"
     )
