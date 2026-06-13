@@ -57,6 +57,30 @@ def test_code_search(tmp_path):
     assert "main.py" in result
 
 
+# ── relative paths resolve against the workspace root (read/write parity) ──────
+
+def test_read_resolves_relative_to_workspace(tmp_path):
+    set_workspace_root(str(tmp_path))
+    (tmp_path / "note.txt").write_text("inside workspace")
+    # A relative path must resolve against the workspace root, not the CWD.
+    result = file_read.invoke({"path": "note.txt"})
+    assert "inside workspace" in result
+
+
+def test_read_write_same_relative_path_hit_same_file(tmp_path):
+    set_workspace_root(str(tmp_path))
+    file_write.invoke({"path": "data.txt", "content": "hello"})
+    result = file_read.invoke({"path": "data.txt"})
+    assert "hello" in result
+
+
+def test_list_resolves_relative_to_workspace(tmp_path):
+    set_workspace_root(str(tmp_path))
+    (tmp_path / "a.py").write_text("x = 1")
+    result = file_list.invoke({"path": ".", "pattern": "*.py"})
+    assert "a.py" in result
+
+
 # ── shell ─────────────────────────────────────────────────────────────────────
 
 def test_shell_basic():

@@ -26,17 +26,19 @@ def _workspace() -> Path:
     return Path(_workspace_root.get()).expanduser().resolve()
 
 
-def _safe_path(path: str, base: str = ".") -> Path:
-    base_p = Path(base).expanduser().resolve()
-    return (base_p / path).resolve()
+def _resolve(path: str) -> Path:
+    """Resolve ``path`` to an absolute path. Relative paths resolve against the
+    workspace root (so read/write/list/search all interpret them the same way);
+    absolute paths are used as-is. No confinement — reads are unrestricted."""
+    target = Path(path).expanduser()
+    return (target if target.is_absolute() else _workspace() / target).resolve()
 
 
 def _resolve_within_workspace(path: str) -> Path | None:
-    """Resolve ``path`` against the workspace root and return it only if it
-    stays inside the workspace. Returns ``None`` if it would escape."""
+    """Resolve ``path`` (see ``_resolve``) and return it only if it stays inside
+    the workspace. Returns ``None`` if it would escape. Used to confine writes."""
     root = _workspace()
-    target = Path(path).expanduser()
-    target = (target if target.is_absolute() else root / target).resolve()
+    target = _resolve(path)
     if target == root or root in target.parents:
         return target
     return None
@@ -49,7 +51,7 @@ def file_read(path: str) -> str:
     Args:
         path: Absolute or relative path to the file.
     """
-    p = _safe_path(path)
+    p = _resolve(path)
     if not p.exists():
         return f"ERROR: File not found: {path}"
     if p.is_dir():
@@ -99,7 +101,7 @@ def file_list(path: str = ".", pattern: str = "*", recursive: bool = False) -> s
         pattern: Glob pattern to filter entries (e.g. '*.py').
         recursive: If True, recurse into subdirectories.
     """
-    p = _safe_path(path)
+    p = _resolve(path)
     if not p.exists():
         return f"ERROR: Path not found: {path}"
     if not p.is_dir():
@@ -132,7 +134,7 @@ def code_search(query: str, path: str = ".", extensions: str = "py,js,ts,go,rs,j
         path: Root directory to search from.
         extensions: Comma-separated file extensions to include.
     """
-    p = _safe_path(path)
+    p = _resolve(path)
     exts = {f".{e.strip()}" for e in extensions.split(",")}
     results: list[str] = []
 
