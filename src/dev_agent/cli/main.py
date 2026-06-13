@@ -285,11 +285,22 @@ def profile_list_cmd():
 @profile_app.command("add")
 def profile_add_cmd(
     name: Optional[str] = typer.Argument(None, help="Profile name (prompted if omitted)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Provider: anthropic, openai, google, groq, ollama."),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model name (e.g. claude-opus-4-8)."),
+    api_key_env: Optional[str] = typer.Option(None, "--api-key-env", help="Env var holding the API key."),
+    base_url: Optional[str] = typer.Option(None, "--base-url", help="Base URL (for Ollama or proxies)."),
+    description: Optional[str] = typer.Option(None, "--description", "-d", help="Profile description."),
+    temperature: Optional[float] = typer.Option(None, "--temperature", help="Sampling temperature (default 0.1)."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
 ):
-    """Add or update an LLM profile interactively."""
+    """Add or update an LLM profile. Omitted fields are prompted interactively."""
     from dev_agent.config import reset_settings
 
-    console.print("\n[bold cyan]Add LLM Profile[/bold cyan]\n")
+    providers = list(_PROVIDER_DEFAULTS.keys())
+    interactive = not all([provider, model])
+
+    if interactive:
+        console.print("\n[bold cyan]Add LLM Profile[/bold cyan]\n")
 
     # Name
     if not name:
@@ -299,51 +310,56 @@ def profile_add_cmd(
     data = _read_yaml_raw(_SETTINGS_PATH)
     existing_profiles = data.get("profiles", {})
 
-    if name in existing_profiles:
-        overwrite = typer.confirm(f"Profile '[cyan]{name}[/cyan]' already exists. Overwrite?", default=False)
+    if name in existing_profiles and not yes:
+        overwrite = typer.confirm(f"Profile '{name}' already exists. Overwrite?", default=False)
         if not overwrite:
             raise typer.Abort()
 
     # Provider
-    providers = list(_PROVIDER_DEFAULTS.keys())
-    console.print(f"Providers: {', '.join(providers)}")
-    provider = typer.prompt("Provider", default="anthropic")
-    while provider not in providers:
-        console.print(f"[red]Unknown provider. Choose from: {', '.join(providers)}[/red]")
+    if not provider:
+        console.print(f"Providers: {', '.join(providers)}")
         provider = typer.prompt("Provider", default="anthropic")
+        while provider not in providers:
+            console.print(f"[red]Unknown provider. Choose from: {', '.join(providers)}[/red]")
+            provider = typer.prompt("Provider", default="anthropic")
+    elif provider not in providers:
+        console.print(f"[red]Unknown provider '{provider}'. Choose from: {', '.join(providers)}[/red]")
+        raise typer.Exit(1)
 
     defaults = _PROVIDER_DEFAULTS[provider]
 
     # Model
-    model = typer.prompt("Model", default=defaults["model"])
+    if not model:
+        model = typer.prompt("Model", default=defaults["model"])
 
     # API key env var
     if provider == "ollama":
         api_key_env = None
-    else:
-        api_key_env = typer.prompt("API key env var", default=defaults["api_key_env"] or "")
-        api_key_env = api_key_env.strip() or None
+    elif api_key_env is None:
+        raw = typer.prompt("API key env var", default=defaults["api_key_env"] or "")
+        api_key_env = raw.strip() or None
 
-    # Base URL (ollama or custom)
-    base_url = None
-    if provider == "ollama":
+    # Base URL
+    if provider == "ollama" and base_url is None:
         base_url = typer.prompt("Base URL", default="http://localhost:11434")
-    else:
-        custom = typer.confirm("Set a custom base URL? (for proxies or local endpoints)", default=False)
-        if custom:
+    elif base_url is None and interactive:
+        if typer.confirm("Set a custom base URL? (for proxies or local endpoints)", default=False):
             base_url = typer.prompt("Base URL")
 
     # Description
-    description = typer.prompt("Description (optional)", default="")
+    if description is None and interactive:
+        description = typer.prompt("Description (optional)", default="") or None
 
     # Temperature
-    temperature = typer.prompt("Temperature", default="0.1")
-    try:
-        temperature = float(temperature)
-    except ValueError:
-        temperature = 0.1
+    if temperature is None and interactive:
+        raw_temp = typer.prompt("Temperature", default="0.1")
+        try:
+            temperature = float(raw_temp)
+        except ValueError:
+            temperature = 0.1
+    temperature = temperature if temperature is not None else 0.1
 
-    # Preview
+    # Build profile dict
     profile_dict: dict = {
         "provider": provider,
         "model": model,
@@ -357,16 +373,15 @@ def profile_add_cmd(
     if description:
         profile_dict["description"] = description
 
-    console.print()
-    console.print(Panel(
-        Syntax(yaml.dump({name: profile_dict}, default_flow_style=False), "yaml", theme="monokai"),
-        title="Profile preview",
-        border_style="cyan",
-    ))
-
-    confirm = typer.confirm("Save this profile?", default=True)
-    if not confirm:
-        raise typer.Abort()
+    if not yes:
+        console.print()
+        console.print(Panel(
+            Syntax(yaml.dump({name: profile_dict}, default_flow_style=False), "yaml", theme="monokai"),
+            title="Profile preview",
+            border_style="cyan",
+        ))
+        if not typer.confirm("Save this profile?", default=True):
+            raise typer.Abort()
 
     if "profiles" not in data:
         data["profiles"] = {}
