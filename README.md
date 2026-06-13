@@ -48,7 +48,12 @@ Or copy `.env.example` to `.env` and fill in the keys manually.
 ```bash
 cacau run "explain the structure of this project"
 cacau run "find all TODO comments and summarise them" --workspace /path/to/project
+
+# Choose a profile
 cacau run "refactor the auth module" --profile powerful
+
+# Override just the model (keeps the profile's provider and API key)
+cacau run "quick question" --profile fast --model llama-3.1-8b-instant
 ```
 
 ### Interactive REPL
@@ -57,6 +62,7 @@ cacau run "refactor the auth module" --profile powerful
 cacau chat
 cacau chat --workspace /path/to/project
 cacau chat --profile balanced
+cacau chat --profile anthropic --model claude-haiku-4-5-20251001
 ```
 
 Available slash commands inside the REPL:
@@ -75,10 +81,29 @@ Available slash commands inside the REPL:
 ### Manage LLM profiles
 
 ```bash
-cacau config profile list            # show all profiles
-cacau config profile add             # interactive wizard
-cacau config profile use powerful    # set default profile
-cacau config profile remove my-old   # remove a profile
+cacau config profile list                      # show all profiles
+
+# Interactive wizard (prompts for each field)
+cacau config profile add
+
+# Partially specified — only omitted fields are prompted
+cacau config profile add my-claude --provider anthropic --model claude-opus-4-8
+
+# Fully non-interactive
+cacau config profile add groq-fast \
+  --provider groq \
+  --model llama-3.1-8b-instant \
+  --api-key-env GROQ_API_KEY \
+  --description "Fast Groq model for simple tasks" \
+  --temperature 0.2 \
+  --yes
+
+# Edit an existing profile (current values shown as defaults)
+cacau config profile edit fast
+cacau config profile edit fast --model llama-3.1-8b-instant --yes
+
+cacau config profile use powerful              # set default profile
+cacau config profile remove my-old            # remove a profile
 ```
 
 ### Manage API keys
